@@ -1,2 +1,89 @@
 # Python-Project
-2134
+#K均值算法的应用
+from numpy import *
+import matplotlib.pyplot as plt
+import matplotlib
+import operator
+
+def classify0(inx,dataset,labels,k):
+    dataSetSize=dataset.shape[0]
+    diffMat=tile(inx,(dataSetSize,1))-dataset
+    sqdiffMat=square(diffMat)
+    sqDistances=sqdiffMat.sum(axis=1)
+    distances=sqrt(sqDistances)
+    index=distances.argsort(0)
+    classcount={}
+    for i in range(k):
+        voteIlabel=labels[int(index[i])]
+        classcount[voteIlabel]=classcount.get(voteIlabel,0)+1
+    sortedClasscount=sorted(classcount.items(),key=operator.itemgetter(1),reverse=True)
+    return sortedClasscount[0][0]
+"""
+group=mat([[1,1.1],[1,1],[0,0],[0,0.1]])
+label=['A','A','B','B']
+print(classify0([0,0],group,label,3))
+"""
+#收集数据
+def filetomatrix(filename):
+    fr=open(filename)
+    arraylines=fr.readlines()
+    numbersoflines=len(arraylines)
+    returnmat=zeros((numbersoflines,3))
+    classlabervector=[]
+    index=0
+    for line in arraylines:
+        line=line.strip()
+        listfromline=line.split('\t')
+        returnmat[index,:]=list(map(float,listfromline[0:3]))
+        classlabervector.append(int(listfromline[-1]))
+        index+=1
+    return returnmat,classlabervector
+
+#画图
+"""
+fig=plt.figure()
+ax=fig.add_subplot(111)
+ax.scatter(s1[:,1],s1[:,2],15.0*array(s2),15.0*array(s2))
+plt.show()
+"""
+#归一化特性
+def autonormal(dataset):
+    minvals=dataset.min(0)
+    maxvals=dataset.max(0)
+    ranges=maxvals-minvals
+    normdateset=zeros(shape(dataset))
+    m=dataset.shape[0]
+    normdateset=dataset-tile(minvals,(m,1))
+    normdateset=normdateset/tile(ranges,(m,1))
+    return normdateset,ranges,minvals
+
+def datingclasstest():
+    horatio=0.1
+    error=0.0
+    datingdatamat,datinglabels=filetomatrix('shuju1.txt')
+    normat,ranges,minvals=autonormal(datingdatamat)
+    m=normat.shape[0]
+    numtestvecs=int(m*horatio)
+    for i in range(numtestvecs):
+        classifierresult=classify0(normat[i,:],normat[numtestvecs:m,:]
+                                   ,datinglabels[numtestvecs:m],4)
+        print ("测试结果：%d,真实结果：%d" % (classifierresult,datinglabels[i]))
+        if classifierresult!=datinglabels[i]:error+=1.0
+    print ("误差率为：%f"%(error/float(numtestvecs)))
+
+def classifyperson():
+    leixing=["没有魅力","一般魅力","很有魅力"]
+    #input("请输入此人信息：")
+    datingdatamat, datinglabels = filetomatrix('shuju1.txt')
+    normat, ranges, minvals = autonormal(datingdatamat)
+    licheng =10000
+    bingjiliang=0.5
+    youxibizhong=10
+    l=[licheng,bingjiliang,youxibizhong]
+    print(l)
+    print(minvals)
+    #l.astype(float32)
+    s=classify0((l-minvals)/ranges,normat,datinglabels,3)
+    print("此人特点：%s"%(leixing[s-1]))
+      #  i+=1
+classifyperson()
