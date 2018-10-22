@@ -1,0 +1,104 @@
+from numpy import *
+from sklearn.feature_extraction.text import TfidfTransformer
+import imp
+
+#读取短信数据
+def readtxt():
+    text=open('C:\mail.txt',encoding='gb18030',errors='ignore')
+    arraylines=text.readlines()
+    doclist=[]
+    classlist=[]
+    for line in arraylines:
+       doclist.append(textparse(line[:-3]))
+       try:
+            classlist.append(int(line[-2]))
+       except:
+           classlist.append(1)
+    return doclist,classlist
+
+#将短信文本转为单个单词的列表
+def textparse(string):
+    import re
+    listwords=re.split(r" |\!|\?|\.|\,|\t|\;|\*|\'|\"|\-", string)
+    return [word.lower() for word in listwords if len(word)>2]#只取具有价值的单词，所以长度大于2
+
+#创建一个包含所有短信单词的单词表
+def Creatvocablist(datalist):
+    vocabset=set([])
+    for x in datalist:
+        vocabset=vocabset|set(x)
+    return list(vocabset)
+
+#创建一个只含1或0的邮件向量
+def Wordstovector(vocablist,inputset):
+    returnvec=[0]*len(vocablist)
+    for word in inputset:
+        returnvec[vocablist.index(word)]+=1
+    return returnvec
+
+#TF-IDF方式来构建词向量。
+def creatif_idf(traindata):
+    tfidf = TfidfTransformer()
+    set_printoptions(2)
+    trainmat=tfidf.fit_transform(traindata).toarray()
+    return trainmat
+
+#训练函数
+def trainNB(trainmat,trainlabel):
+    numTraindocs=len(trainmat)
+    numwords=len(trainmat[0])
+    pre1=sum(trainlabel)/float(numTraindocs)#类别为垃圾短信的先验概率
+    p0=ones(numwords)*0.0001#初始化正常短信对应的各个特征数量
+    p1=ones(numwords)*0.0001#初始化垃圾短信对应的各个特征数量
+    sump0=0 #正常短信的词数
+    sump1=0 #垃圾短信的词数
+    for i in range(numTraindocs):
+        if trainlabel[i]==0:
+            p0+=trainmat[i,:]
+            sump0+=sum(trainmat[i,:])
+        else:
+            p1+=trainmat[i,:]
+            sump1+=sum(trainmat[i,:])
+    p0vect=log(p0/sump0)#列表里每一项为各个词（特征）对应的条件概率（正常邮件）
+    p1vect=log(p1/sump1)
+    return p0vect,p1vect,pre1
+
+#由后验概率判断短信属于哪一类
+def classfyNB(vec,p0vect,p1vect,pre1):
+    post0=sum(vec*p0vect)+log(1-pre1)#属于正常短信的后验概率
+    post1=sum(vec*p1vect)+log(pre1)#属于垃圾短信的后验概率
+    if post1>post0:
+        return 1
+    else:
+        return 0
+
+#测试函数
+def test():
+    doclist,classlist=readtxt()
+    vocablist=Creatvocablist(doclist)
+    lendoc=len(doclist)
+    trainset=range(lendoc)
+    testset=[]
+    testnum=1000
+    for i in range(testnum):
+        randindex=int(random.uniform(0,lendoc))
+        testset.append(trainset[randindex])
+    trainmat1=[]
+    for j in range(lendoc):
+        trainmat1.append(Wordstovector(vocablist,doclist[j]))
+    trainmat=creatif_idf(trainmat1)
+    p0,p1,pre1=trainNB(trainmat,array(classlist))
+    rightcount=0
+    for i in testset:
+        wordvecter=Wordstovector(vocablist,doclist[i])
+        if classfyNB(array(wordvecter),p0,p1,pre1)==classlist[i]:
+            rightcount+=1
+    return (rightcount/testnum)
+#print("分类正确率：%f"%(rightcount/testnum))
+
+rate=[]
+for i in range(10):
+    rate.append(test())
+print(rate)
+
+
